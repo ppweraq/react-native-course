@@ -1,22 +1,44 @@
-import { Stack } from "expo-router";
+import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { router, Stack, useSegments } from "expo-router";
+import { useEffect } from "react";
 import { StatusBar } from "react-native";
 
-export default function RootLayout() {
-  const user = null; // заменить на реальную проверку авторизации
+function RootStack() {
+  const { user, isLoadingUser } = useAuth();
+  const segments = useSegments();
+
+  useEffect(() => {
+    const inAuthGroup = segments[0] === "auth";
+
+    if (!user && !inAuthGroup && !isLoadingUser) {
+      router.replace("/auth");
+    } else if (user && inAuthGroup && !isLoadingUser) {
+      router.replace("/");
+    }
+  }, [user, isLoadingUser, segments, router]);
+
+  if (isLoadingUser) return <StatusBar />;
+  // Можно показать спиннер или StatusBar, пока идёт проверка пользователя
 
   return (
     <Stack>
-      <StatusBar />
-
-      {/* Экран для авторизованных */}
       <Stack.Protected guard={!!user}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack.Protected>
 
-      {/* Экран для неавторизованных */}
       <Stack.Protected guard={!user}>
         <Stack.Screen name="auth" options={{ title: "Authentication" }} />
       </Stack.Protected>
     </Stack>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <StatusBar />
+
+      <RootStack />
+    </AuthProvider>
   );
 }
